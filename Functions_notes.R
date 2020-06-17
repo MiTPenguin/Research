@@ -39,3 +39,17 @@ find_pcCut <- function(seurat){
   pcCut<-which.max(distToLine) 
   return(pcCut)
 }
+
+Read_10x_data <- function(Sample_list, data_dir){
+#basically take a lits of samples, then use a baes data_dir to pull out the barocdes, genes, and matrix files
+#remember to gunzip everything. the Read10X function is not really quite that smart.
+    d10x.data <- sapply(Sample_list, function(i){
+      d10x <- Read10X(file.path(data_dir,i))
+      colnames(d10x) <- paste(sapply(strsplit(colnames(d10x),split="-"),'[[',1L),i,sep="-") 
+    #this line is a bit tougher to understand
+      d10x
+    })
+return(d10x.data)
+}
+
+
