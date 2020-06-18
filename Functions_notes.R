@@ -102,10 +102,12 @@ Calculate_mito <- function(Seurat, Species = 'mouse'){
 #   }
 #   return(seurat)
 # }
-Seurat_preprocess <- function(seurat, species = "human", 
+Seurat_preprocess <- function(seurat, species = "human", normalize = TRUE,
   vars.to.regress = c('nCount_RNA','percent.mito'), model.use = 'linear',...) {
   seurat <- Calculate_mito(seurat, species)
+  if(normalize){
   seurat <- NormalizeData(object = seurat)
+  }
   seurat <- FindVariableFeatures(seurat) #currently, this just does the default findvariable feature plot
   
   seurat <-  ScaleData(seurat, vars.to.regress = vars.to.regress, model.use = model.use)
