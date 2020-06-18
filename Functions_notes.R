@@ -116,7 +116,7 @@ Seurat_preprocess <- function(seurat, species = "human",
 return(seurat)
 }
 
-Seurat_cluster<- function(seurat, cutoff, perp = 30,
+Seurat_cluster<- function(seurat, cutoff = 10, perp = 30,
   tsne.run = FALSE, umap.run = TRUE, res = 0.8,...){
   seurat <- FindNeighbors(seurat,dims = 1:cutoff)
   seurat <- FindClusters(seurat, resolution = res)
@@ -126,7 +126,7 @@ Seurat_cluster<- function(seurat, cutoff, perp = 30,
   }
   if(umap.run){
     seurat <-  RunUMAP(seurat, dims = 1:cutoff,umap.method = 'uwot-learn')
-    DimPlot(seurat, 'umap', label = TRUE)
+    DimPlot(seurat, reduction = 'umap', label = TRUE)
   }
   return(seurat)
 }
