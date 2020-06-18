@@ -78,27 +78,91 @@ Calculate_mito <- function(Seurat, Species = 'mouse'){
     return(Seurat)
 }
 
-#update: with the new Seurat, I think find Variable genes, 
-Seurat_process <- function(seurat, perp = 30, cutoff = NULL, limit = FALSE,cf = 0.2, mf = 0.1,umap.run = TRUE,...) {
+#update: with the new Seurat, I think find Variable genes, and other processes would have to be re-written
+# Seurat_process <- function(seurat, perp = 30, cutoff = NULL, limit = FALSE,cf = 0.2, mf = 0.1,umap.run = TRUE,...) {
+#   seurat <- NormalizeData(object = seurat)
+#   if(limit!=FALSE){
+#     seurat <- limit_vargenes(seurat,limit,cf)
+#   }else{
+#     seurat <-  FindVariableGenes(seurat,x.low.cutoff = mf, y.cutoff = cf, do.plot = FALSE)
+#   }
+#   seurat <-  ScaleData(seurat, vars.to.regress = c('nUMI', 'percent.mito'), 
+#                        model.use = 'poisson', genes.use = seurat@var.genes)
+#   seurat <-  RunPCA(seurat, do.print = FALSE)
+#   if(is.null(cutoff)){
+#     cutoff <- find_pcCut(seurat)
+#   }
+#   print(paste("PCA cutoff used is",cutoff,"components"))
+#   seurat <-  RunTSNE(seurat, dims.use = 1:cutoff, perplexity = perp)
+#   #seurat = SetAllIdent(seurat, 'expt')
+#   TSNEPlot(seurat)
+#   if(umap.run){
+#     seurat <-  RunUMAP(seurat, dims.use = 1:cutoff)
+#     DimPlot(seurat, 'umap')
+#   }
+#   return(seurat)
+# }
+Seurat_preprocess <- function(seurat, species = "human", 
+  vars.to.regress = c('nCount_RNA','percent.mito'), model.use = 'linear',...) {
+  seurat <- Calculate_mito(seurat, species)
   seurat <- NormalizeData(object = seurat)
-  if(limit!=FALSE){
-    seurat <- limit_vargenes(seurat,limit,cf)
-  }else{
-    seurat <-  FindVariableGenes(seurat,x.low.cutoff = mf, y.cutoff = cf, do.plot = FALSE)
-  }
-  seurat <-  ScaleData(seurat, vars.to.regress = c('nUMI', 'percent.mito'), 
-                       model.use = 'poisson', genes.use = seurat@var.genes)
-  seurat <-  RunPCA(seurat, do.print = FALSE)
-  if(is.null(cutoff)){
-    cutoff <- find_pcCut(seurat)
-  }
+  seurat <- FindVariableFeatures(seurat) #currently, this just does the default findvariable feature plot
+  
+  seurat <-  ScaleData(seurat, vars.to.regress = vars.to.regress, model.use = model.use)
+  seurat <-  RunPCA(seurat)
+
+  cutoff <- find_pcCut(seurat)
   print(paste("PCA cutoff used is",cutoff,"components"))
+return(seurat)
+}
+
+Seurat_cluster<- function(seurat, cuttoff, perp = 30,
+  tsne.run = FALSE, umap.run = TRUE, res = 0.8,...){
+  seurat <- FindNeighbors(seurat,dims = 1:cutoff)
+  seurat <- FindClusters(seurat, resolution = res)
+  if(tsne.run){
   seurat <-  RunTSNE(seurat, dims.use = 1:cutoff, perplexity = perp)
-  #seurat = SetAllIdent(seurat, 'expt')
-  TSNEPlot(seurat)
+  DimPlot(seurat, 'tsne', label = TRUE)
+  }
   if(umap.run){
-    seurat <-  RunUMAP(seurat, dims.use = 1:cutoff)
-    DimPlot(seurat, 'umap')
+    seurat <-  RunUMAP(seurat, dims.use = 1:cutoff,umap.method = 'uwot-learn')
+    DimPlot(seurat, 'umap', label = TRUE)
   }
   return(seurat)
 }
+
+# Seurat_preprocess <- function(seurat, species = "human", perp = 30, 
+#   vars.to.regress = c('nCount_RNA','percent.mito'), model.use = 'linear',
+#   tsne.run = FALSE, umap.run = TRUE, ...) {
+#   seurat <- Calculate_mito(seurat, species)
+#   seurat <- NormalizeData(object = seurat)
+#   seurat <- FindVariableFeatures(seurat) #currently, this just does the default find
+  
+#   seurat <-  ScaleData(seurat, vars.to.regress = vars.to.regress, model.use = model.use)
+#   seurat <-  RunPCA(seurat)
+
+#   cutoff <- find_pcCut(seurat)
+#   print(paste("PCA cutoff used is",cutoff,"components"))
+#   if(tsne.run){
+#   seurat <-  RunTSNE(seurat, dims.use = 1:cutoff, perplexity = perp)
+#   DimPlot(seurat, 'tsne', label = TRUE)
+#   }
+#   if(umap.run){
+#     seurat <-  RunUMAP(seurat, dims.use = 1:cutoff,umap.method = 'uwot-learn')
+#     DimPlot(seurat, 'umap', label = TRUE)
+#   }
+#   return(seurat)
+# }
+
+#  seurat <- FindNeighbors(Petti_Seurat,dims = 1:cutoff)
+#  seurat <- FindClusters(Petti_Seurat, resolution = res)
+#  if(tsne.run){
+#  seurat <-  RunTSNE(seurat, dims.use = 1:cutoff, perplexity = perp)
+#  DimPlot(seurat, 'tsne', label = TRUE)
+#  }
+#  if(umap.run){
+#    seurat <-  RunUMAP(seurat, dims.use = 1:cutoff,umap.method = 'uwot-learn')
+#    DimPlot(seurat, 'umap', label = TRUE)
+#  }
+#  return(seurat)
+#}
