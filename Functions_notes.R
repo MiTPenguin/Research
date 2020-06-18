@@ -121,11 +121,11 @@ Seurat_cluster<- function(seurat, cutoff, perp = 30,
   seurat <- FindNeighbors(seurat,dims = 1:cutoff)
   seurat <- FindClusters(seurat, resolution = res)
   if(tsne.run){
-  seurat <-  RunTSNE(seurat, dims.use = 1:cutoff, perplexity = perp)
+  seurat <-  RunTSNE(seurat, dims = 1:cutoff, perplexity = perp)
   DimPlot(seurat, 'tsne', label = TRUE)
   }
   if(umap.run){
-    seurat <-  RunUMAP(seurat, dims.use = 1:cutoff,umap.method = 'uwot-learn')
+    seurat <-  RunUMAP(seurat, dims = 1:cutoff,umap.method = 'uwot-learn')
     DimPlot(seurat, 'umap', label = TRUE)
   }
   return(seurat)
