@@ -133,6 +133,7 @@ Seurat_cluster<- function(seurat, cutoff = 10, perp = 30,
   return(seurat)
 }
 
+
 # Seurat_preprocess <- function(seurat, species = "human", perp = 30, 
 #   vars.to.regress = c('nCount_RNA','percent.mito'), model.use = 'linear',
 #   tsne.run = FALSE, umap.run = TRUE, ...) {
@@ -168,3 +169,56 @@ Seurat_cluster<- function(seurat, cutoff = 10, perp = 30,
 #  }
 #  return(seurat)
 #}
+#This is the more defualt DE test that I usually use to wrap around 
+DE_test <- function(seurat, group_1, group_2 = NULL, method = "bimod",max_p = 10e-30, min_p = 0.001, 
+                    foldchangethresh = 2,logfc.threshold = 0,max_cells = Inf, ...){
+  require(tidyverse)
+  require(Seurat)
+  
+  DE_output <- FindMarkers(seurat,logfc.threshold = logfc.threshold, ident.1 = group_1, ident.2 = group_2,
+                           test.use = method, verbose = TRUE, max.cells.per.ident = max_cells, ...)
+  DE_output <- as_tibble(DE_output, rownames = "genes")
+  DE_output <- DE_output %>% mutate(Graph_adj_p = ifelse(p_val_adj > max_p, p_val_adj, max_p),
+                                    significance = ifelse(p_val_adj< min_p, "p-significant","not significant"))
+  DE_output <- DE_output %>% mutate(significance = ifelse((abs(avg_logFC)> log(foldchangethresh)) & significance == "p-significant", "significant",significance)) %>%
+    mutate(significance = factor(significance, levels = c("not significant","p-significant","significant")))
+  
+  return(DE_output)
+}
+#Asuuming we ran the DE_test function above.
+#modified so that if no list of genes are supplied, automatically look for top differnetially expressing genes in terms of increasing
+#and decrreasing fold-change genes. also include the nudge parameter to put in, so that we can 
+plot_volcano <- function(DE_results,gene_list_1=NULL, gene_list_2 = NULL, max_p = 10e-30, 
+                         min_p = 0.001, right_nudge = 0.8, left_nudge = 0, label_size = 2){
+  require(ggrepel)
+  require(ggplot2)
+
+  volcano <- ggplot(DE_results, aes(avg_logFC,-log10(Graph_adj_p))) + 
+    geom_point(aes(color = significance), size = 0.3) + geom_hline(yintercept = -log10(min_p), linetype = 2) +
+  geom_hline(yintercept = -log10(max_p),linetype = 2) + scale_color_manual(values =c("grey87","magenta3","darkturquoise")) +
+  labs(x = "ln(fold change)", y = "-log10(adjusterd p-value)")
+  
+  if(!is.null(gene_list_1)){
+    right_labeled_genes <- DE_results %>% filter(genes %in% gene_list_1)
+    volcano <- volcano + geom_text_repel(data = right_labeled_genes, aes(label = genes),
+                                         segment.size = 0.2, segment.color = "grey50", size =label_size, nudge_y = -2,
+                                         nudge_x = right_nudge - right_labeled_genes$avg_logFC, direction = "y", hjust = 1) 
+  } else{
+    right_labeled_genes <- DE_results %>% arrange(desc(p_val_adj),desc(avg_logFC)) %>% top_n(10,avg_logFC)
+    volcano <- volcano + geom_text_repel(data = right_labeled_genes, aes(label = genes),
+                                         segment.size = 0.2, segment.color = "grey50", size =label_size, nudge_y = -2,
+                                         nudge_x = right_nudge - right_labeled_genes$avg_logFC, direction = "y", hjust = 1) 
+  }
+  if(!is.null(gene_list_2)){
+    left_labeled_genes <- DE_results %>% filter(genes %in% gene_list_2)
+    volcano <- volcano + geom_text_repel(data = left_labeled_genes, aes(label = genes),
+                                         segment.size = 0.2, segment.color = "grey50", size =label_size, nudge_y = -2,
+                                         nudge_x = left_nudge + left_labeled_genes$avg_logFC, direction = "y", hjust = 1)
+  } else{
+    left_labeled_genes <- DE_results %>% arrange(desc(p_val_adj),(avg_logFC)) %>% top_n(10,-avg_logFC)
+    volcano <- volcano + geom_text_repel(data = left_labeled_genes, aes(label = genes),
+                                         segment.size = 0.2, segment.color = "grey50", size =label_size, nudge_y = -2,
+                                         nudge_x = left_nudge + left_labeled_genes$avg_logFC, direction = "y", hjust = 1)  
+  }
+  return(volcano)
+}
